@@ -24,18 +24,29 @@ export const useProjectStore = defineStore("project", {
     },
     async addProject(projectData) {
       try {
-        await addDoc(collection(db, "projects"), projectData);
+        const docRef = await addDoc(collection(db, "projects"), projectData);
+        this.projects.push({ id: docRef.id, ...projectData }); // Mise à jour locale immédiate
       } catch (err) {
         this.error = err.message;
       }
     },
+
     async updateProject(projectId, updatedData) {
       const docRef = doc(db, "projects", projectId);
       await updateDoc(docRef, updatedData);
+
+      // Mise à jour locale
+      const index = this.projects.findIndex(p => p.id === projectId);
+      if (index !== -1) {
+        this.projects[index] = { ...this.projects[index], ...updatedData };
+      }
     },
     async deleteProject(projectId) {
       const docRef = doc(db, "projects", projectId);
       await deleteDoc(docRef);
+
+      // Supprimer localement
+      this.projects = this.projects.filter(p => p.id !== projectId);
     },
     // Pour les tâches
     async getTasks(projectId) {
@@ -55,5 +66,14 @@ export const useProjectStore = defineStore("project", {
       const docRef = doc(db, "projects", projectId, "tasks", taskId);
       await deleteDoc(docRef);
     }
+  },
+  getters: {
+  getTotalTasksByStatus: (state) => (status) => {
+    let count = 0
+    Object.values(state.tasks).forEach(taskList => {
+      count += taskList.filter(t => t.status === status).length
+    })
+    return count
   }
+}
 });
