@@ -45,16 +45,16 @@ const router = createRouter({
 
 // Navigation Guard
 router.beforeEach((to, from, next) => {
-  const authStore = useAuthStore();
-  const user = authStore.user;
+//   const authStore = useAuthStore();
+//   const user = authStore.user;
 
-  if (to.meta.requiresAuth && !user) {
-    next({ name: 'auth' }); // redirige vers la page login
-  } else if ((to.name === 'auth') && user) {
-    next({ name: 'dashboard' }); // si déjà connecté, pas besoin de login
-  } else {
+//   if (to.meta.requiresAuth && !user) {
+//     next({ name: 'auth' }); // redirige vers la page login
+//   } else if ((to.name === 'auth') && user) {
+//     next({ name: 'dashboard' }); // si déjà connecté, pas besoin de login
+//   } else {
     next(); // autorise la navigation
-  }
+//   }
 });
 
 export default router;
