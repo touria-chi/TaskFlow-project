@@ -1,24 +1,21 @@
 <template>
   <AppNavbar />
   <div class="dashboard-container">
-    <!-- <LoadingSpinner v-if="isLoading" /> -->
-    <div>
-      <!-- Votre contenu -->
-  
+    
     <!-- Header Section -->
     <div class="dashboard-header">
       <div>
         <h1 class="dashboard-title">Mes Projets</h1>
         <p class="dashboard-subtitle">Gérez vos projets avec style et efficacité</p>
       </div>
-      <button @click="showProjectModal = true" class="btn-new-project">
+      <button @click="openCreateModal" class="btn-new-project">
         <span class="icon-plus">+</span>
         Nouveau Projet
       </button>
     </div>
 
     <!-- Statistics Cards -->
-    <div class="stats-grid">
+    <div v-if="!isLoading" class="stats-grid">
       <div class="stat-card stat-card-blue">
         <div class="stat-content">
           <div>
@@ -65,7 +62,9 @@
     </div>
 
     <!-- Projects Grid -->
-    <div class="projects-grid">
+    <LoadingSpinner v-if="isLoading" :message="loadingMessage" />
+    
+    <div v-else class="projects-grid">
       <div 
         v-for="project in projects" 
         :key="project.id"
@@ -80,7 +79,7 @@
             </svg>
           </div>
           <div class="project-actions">
-            <button @click.stop="editProject(project)" class="btn-icon">
+            <button @click.stop="openEditModal(project)" class="btn-icon">
               <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                 <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
                 <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
@@ -128,7 +127,7 @@
     </div>
 
     <!-- Empty State -->
-    <div v-if="projects.length === 0" class="empty-state">
+    <div v-if="!isLoading && projects.length === 0" class="empty-state">
       <div class="empty-icon">
         <svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
           <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/>
@@ -136,93 +135,30 @@
       </div>
       <h3 class="empty-title">Aucun projet pour le moment</h3>
       <p class="empty-text">Créez votre premier projet pour commencer à organiser vos tâches</p>
-      <button @click="showProjectModal = true" class="btn-create-first">
+      <button @click="openCreateModal" class="btn-create-first">
         Créer mon premier projet
       </button>
     </div>
 
-    <!-- Project Modal -->
-    <div v-if="showProjectModal" class="modal-overlay" @click="closeModal">
-      <div class="modal-content" @click.stop>
-        <div class="modal-header">
-          <h2 class="modal-title">{{ editingProject ? 'Modifier le projet' : 'Nouveau Projet' }}</h2>
-          <button @click="closeModal" class="btn-close">
-            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <line x1="18" y1="6" x2="6" y2="18"/>
-              <line x1="6" y1="6" x2="18" y2="18"/>
-            </svg>
-          </button>
-        </div>
+    <!-- Project Modal Component -->
+    <ProjectModal
+      :show="showProjectModal"
+      :project="editingProject"
+      @close="closeModal"
+      @save="handleSave"
+    />
 
-        <form @submit.prevent="saveProject" class="modal-form">
-          <div class="form-group">
-            <label class="form-label">Nom du projet</label>
-            <input 
-              v-model="projectForm.name" 
-              type="text" 
-              class="form-input" 
-              placeholder="Ex: Refonte Site Web"
-              required
-            />
-          </div>
-
-          <div class="form-group">
-            <label class="form-label">Description</label>
-            <textarea 
-              v-model="projectForm.description" 
-              class="form-textarea" 
-              placeholder="Décrivez votre projet..."
-              rows="3"
-              required
-            ></textarea>
-          </div>
-
-          <div class="form-group">
-            <label class="form-label">Couleur distinctive</label>
-            <div class="color-picker">
-              <div 
-                v-for="color in colors" 
-                :key="color"
-                class="color-option"
-                :class="{ 'color-selected': projectForm.color === color }"
-                :style="{ backgroundColor: color }"
-                @click="projectForm.color = color"
-              ></div>
-            </div>
-          </div>
-
-          <div class="modal-actions">
-            <button type="button" @click="closeModal" class="btn-cancel">
-              Annuler
-            </button>
-            <button type="submit" class="btn-submit">
-              {{ editingProject ? 'Mettre à jour' : 'Créer le projet' }}
-            </button>
-          </div>
-        </form>
-      </div>
-    </div>
   </div>
-    </div>
-
 </template>
 
 <script setup>
 import AppNavbar from '../components/AppNavbar.vue'
+import ProjectModal from '../components/ProjectModal.vue'
+import LoadingSpinner from '../components/LoadingSpinner.vue'
 import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useProjectStore } from '../stores/projectStore'
 import { useAuthStore } from '../stores/authStore'
-
-import LoadingSpinner from '../components/LoadingSpinner.vue'
-
-const isLoading = ref(true)
-
-onMounted(async () => {
-  isLoading.value = true
-  await projectStore.getProjects(authStore.user.uid)
-  isLoading.value = false
-})
 
 const router = useRouter()
 const projectStore = useProjectStore()
@@ -230,37 +166,34 @@ const authStore = useAuthStore()
 
 const showProjectModal = ref(false)
 const editingProject = ref(null)
-
-const projectForm = ref({
-  name: '',
-  description: '',
-  color: '#8b5cf6'
-})
-
-const colors = [
-  '#8b5cf6', // violet
-  '#ec4899', // rose
-  '#3b82f6', // bleu
-  '#10b981', // vert
-  '#f59e0b', // orange
-  '#ef4444', // rouge
-  '#06b6d4', // cyan
-  '#6366f1'  // indigo
-]
+const isLoading = ref(true)
+const loadingMessage = ref('Chargement de vos projets...')
 
 const projects = computed(() => projectStore.projects)
 const tasksInProgress = computed(() => projectStore.getTotalTasksByStatus('doing'))
 const tasksCompleted = computed(() => projectStore.getTotalTasksByStatus('done'))
 
 onMounted(async () => {
-  await projectStore.getProjects(authStore.user.uid)
+  isLoading.value = true
+  loadingMessage.value = 'Vérification de l\'authentification...'
+  
+  // Vérifier si l'utilisateur est authentifié
+  if (!authStore.user) {
+    console.error('Utilisateur non authentifié')
+    router.push('/login')
+    return
+  }
+  
+  try {
+    loadingMessage.value = 'Chargement de vos projets...'
+    await projectStore.getProjects(authStore.user.uid)
+  } catch (error) {
+    console.error('Erreur lors du chargement des projets:', error)
+  } finally {
+    isLoading.value = false
+  }
 })
 
-// const calculateProgress = (project) => {
-//   const total = (project.tasksTodo || 0) + (project.tasksDoing || 0) + (project.tasksDone || 0)
-//   if (total === 0) return 0
-//   return Math.round(((project.tasksDone || 0) / total) * 100)
-// }
 const calculateProgress = (project) => {
   const projectTasks = projectStore.tasks[project.id] || []
   const total = projectTasks.length
@@ -269,31 +202,41 @@ const calculateProgress = (project) => {
   return total === 0 ? 0 : Math.round((done / total) * 100)
 }
 
-
 const goToProject = (projectId) => {
   router.push(`/project/${projectId}`)
 }
 
-const editProject = (project) => {
-  editingProject.value = project
-  projectForm.value = {
-    name: project.name,
-    description: project.description,
-    color: project.color
-  }
+const openCreateModal = () => {
+  editingProject.value = null
   showProjectModal.value = true
 }
 
-const saveProject = async () => {
-  if (editingProject.value) {
-    await projectStore.updateProject(editingProject.value.id, projectForm.value)
-  } else {
-    await projectStore.addProject({
-      ...projectForm.value,
-      ownerId: authStore.user.uid
-    })
+const openEditModal = (project) => {
+  editingProject.value = project
+  showProjectModal.value = true
+}
+
+const handleSave = async (projectData) => {
+  if (!authStore.user) {
+    console.error('Utilisateur non authentifié')
+    return
   }
-  closeModal()
+  
+  try {
+    if (editingProject.value) {
+      // Mise à jour d'un projet existant
+      await projectStore.updateProject(editingProject.value.id, projectData)
+    } else {
+      // Création d'un nouveau projet
+      await projectStore.addProject({
+        ...projectData,
+        ownerId: authStore.user.uid
+      })
+    }
+    closeModal()
+  } catch (error) {
+    console.error('Erreur lors de la sauvegarde du projet:', error)
+  }
 }
 
 const deleteProject = async (projectId) => {
@@ -305,11 +248,6 @@ const deleteProject = async (projectId) => {
 const closeModal = () => {
   showProjectModal.value = false
   editingProject.value = null
-  projectForm.value = {
-    name: '',
-    description: '',
-    color: '#8b5cf6'
-  }
 }
 </script>
 
@@ -619,158 +557,6 @@ const closeModal = () => {
 .btn-create-first:hover {
   transform: translateY(-2px);
   box-shadow: 0 6px 20px rgba(236, 72, 153, 0.4);
-}
-
-/* Modal */
-.modal-overlay {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: rgba(0, 0, 0, 0.7);
-  backdrop-filter: blur(4px);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 1000;
-  padding: 1rem;
-}
-
-.modal-content {
-  background: linear-gradient(135deg, #2d1b4e 0%, #1a0b2e 100%);
-  border-radius: 20px;
-  padding: 2rem;
-  max-width: 500px;
-  width: 100%;
-  border: 1px solid rgba(139, 92, 246, 0.3);
-}
-
-.modal-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 1.5rem;
-}
-
-.modal-title {
-  color: white;
-  font-size: 1.5rem;
-  margin: 0;
-}
-
-.btn-close {
-  background: none;
-  border: none;
-  color: #a78bfa;
-  cursor: pointer;
-  padding: 0.5rem;
-  transition: color 0.2s ease;
-}
-
-.btn-close:hover {
-  color: white;
-}
-
-.modal-form {
-  display: flex;
-  flex-direction: column;
-  gap: 1.5rem;
-}
-
-.form-group {
-  display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
-}
-
-.form-label {
-  color: #a78bfa;
-  font-size: 0.875rem;
-  font-weight: 500;
-}
-
-.form-input,
-.form-textarea {
-  background: rgba(255, 255, 255, 0.05);
-  border: 1px solid rgba(139, 92, 246, 0.3);
-  border-radius: 10px;
-  padding: 0.75rem 1rem;
-  color: white;
-  font-size: 1rem;
-  transition: all 0.2s ease;
-}
-
-.form-input:focus,
-.form-textarea:focus {
-  outline: none;
-  border-color: #8b5cf6;
-  background: rgba(255, 255, 255, 0.08);
-}
-
-.form-textarea {
-  resize: vertical;
-  font-family: inherit;
-}
-
-.color-picker {
-  display: flex;
-  gap: 0.75rem;
-  flex-wrap: wrap;
-}
-
-.color-option {
-  width: 40px;
-  height: 40px;
-  border-radius: 10px;
-  cursor: pointer;
-  transition: all 0.2s ease;
-  border: 3px solid transparent;
-}
-
-.color-option:hover {
-  transform: scale(1.1);
-}
-
-.color-selected {
-  border-color: white;
-  transform: scale(1.15);
-}
-
-.modal-actions {
-  display: flex;
-  gap: 1rem;
-  margin-top: 0.5rem;
-}
-
-.btn-cancel,
-.btn-submit {
-  flex: 1;
-  padding: 0.875rem;
-  border-radius: 10px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 0.2s ease;
-  border: none;
-}
-
-.btn-cancel {
-  background: rgba(255, 255, 255, 0.1);
-  color: white;
-}
-
-.btn-cancel:hover {
-  background: rgba(255, 255, 255, 0.15);
-}
-
-.btn-submit {
-  background: linear-gradient(135deg, #ec4899 0%, #8b5cf6 100%);
-  color: white;
-}
-
-.btn-submit:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 4px 15px rgba(236, 72, 153, 0.4);
 }
 
 /* Responsive */
