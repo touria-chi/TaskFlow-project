@@ -4,29 +4,26 @@ import { useRoute } from 'vue-router'
 import { useProjectStore } from '../stores/projectStore'
 import TaskCard from '@/components/TaskCard.vue'
 import TaskModal from '@/components/TaskModal.vue'
+import AppNavbar from '@/components/AppNavbar.vue'
 
 const route = useRoute()
 const projectId = route.params.id
 const projectStore = useProjectStore()
 
-// Modal state
 const showModal = ref(false)
 const editingTask = ref(null)
 const editingColumn = ref(null)
 
-// Charger les tâches Firestore
 onMounted(() => {
   projectStore.getTasks(projectId)
 })
 
-// 🔥 Tâches par statut (depuis Firestore)
 const tasks = computed(() => ({
   todo: (projectStore.tasks[projectId] || []).filter(t => t.status === 'todo'),
   doing: (projectStore.tasks[projectId] || []).filter(t => t.status === 'doing'),
   done: (projectStore.tasks[projectId] || []).filter(t => t.status === 'done')
 }))
 
-// 📊 Statistiques
 const stats = computed(() => ({
   total: tasks.value.todo.length + tasks.value.doing.length + tasks.value.done.length,
   todo: tasks.value.todo.length,
@@ -34,7 +31,6 @@ const stats = computed(() => ({
   done: tasks.value.done.length
 }))
 
-// Modal controls
 const openModal = (column, task = null) => {
   editingColumn.value = column
   editingTask.value = task
@@ -46,14 +42,9 @@ const closeModal = () => {
   editingTask.value = null
 }
 
-// CRUD tâches
 const saveTask = async ({ title, desc, dueDate }) => {
   if (editingTask.value) {
-    await projectStore.updateTask(
-      projectId,
-      editingTask.value.id,
-      { title, desc, dueDate }
-    )
+    await projectStore.updateTask(projectId, editingTask.value.id, { title, desc, dueDate })
   } else {
     await projectStore.addTask(projectId, {
       title,
@@ -71,27 +62,39 @@ const deleteTask = async (task) => {
 }
 
 const moveTask = async (task, toStatus) => {
-  await projectStore.updateTask(projectId, task.id, {
-    status: toStatus
-  })
+  await projectStore.updateTask(projectId, task.id, { status: toStatus })
 }
 </script>
 
-
 <template>
-<div class="page">
-  <!-- 🔥 Header Statistiques -->
+<div class="project-page">
+  <!-- Navbar fixée -->
+  <AppNavbar class="fixed-navbar" />
+
+  <!-- Header Statistiques -->
   <div class="stats">
-    <div class="stat-card">Total tâches: {{stats.total}}</div>
-    <div class="stat-card">À faire: {{stats.todo}}</div>
-    <div class="stat-card">En cours: {{stats.doing}}</div>
-    <div class="stat-card">Terminé: {{stats.done}}</div>
+    <div class="stat-card">
+      <div class="stat-title">Total Tâches</div>
+      <div class="stat-value">{{ stats.total }}</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-title">À faire</div>
+      <div class="stat-value">{{ stats.todo }}</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-title">En cours</div>
+      <div class="stat-value">{{ stats.doing }}</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-title">Terminé</div>
+      <div class="stat-value">{{ stats.done }}</div>
+    </div>
   </div>
 
-  <h1 class="project-title"> Task flow - KANBAN</h1>
+  <h1 class="project-title">Task Flow - KANBAN</h1>
   <p class="project-desc">Organisez vos tâches, suivez leur avancement et restez productif en un coup d’œil.</p>
 
-  <!--  Kanban -->
+  <!-- Kanban -->
   <div class="board">
     <div v-for="col in ['todo','doing','done']" :key="col" class="column">
       <div class="col-header">
@@ -122,55 +125,148 @@ const moveTask = async (task, toStatus) => {
 </template>
 
 <style scoped>
-.page {
-  min-height:100vh;
-  padding:60px;
-  background: linear-gradient(135deg,#2e025c,#4a0072);
-  font-family:'Poppins',sans-serif;
-  color:white;
+/* Navbar fixée */
+.fixed-navbar {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 999;
 }
 
+/* Page */
+.project-page {
+  min-height: 100vh;
+  padding: 120px 40px 40px; /* top pour navbar fixe */
+  background: linear-gradient(135deg,#1f0533,#3b0761);
+  font-family: 'Poppins', sans-serif;
+  color: white;
+}
+
+/* Statistiques */
+.stats {
+  display: flex;
+  justify-content: center;
+  gap: 30px;
+  margin-bottom: 50px;
+  flex-wrap: wrap;
+}
+
+.stat-card {
+  background: rgba(139,92,246,0.15);
+  border-radius: 24px;
+  padding: 28px 36px;
+  text-align: center;
+  backdrop-filter: blur(16px);
+  box-shadow: 0 15px 40px rgba(156,39,176,0.4);
+  transition: all 0.3s ease;
+  min-width: 150px;
+}
+.stat-card:hover {
+  transform: translateY(-5px) scale(1.05);
+  box-shadow: 0 20px 50px rgba(156,39,176,0.55);
+}
+.stat-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: #e0c6f5;
+  margin-bottom: 10px;
+  text-transform: uppercase;
+}
+.stat-value {
+  font-size: 32px;
+  font-weight: 700;
+  color: #fff;
+}
+
+/* Titres projet */
 .project-title {
-  font-size:36px; font-weight:700;
-  text-align:center; margin-bottom:6px;
-  background: linear-gradient(90deg,#ff80ab,#ea80fc);
-  /* -webkit-background-clip:text; */
-  -webkit-text-fill-color:transparent;
+  font-size: 44px; font-weight: 700;
+  text-align: center; margin-bottom: 10px;
+  background: linear-gradient(90deg,#8b5cf6,#ec4899);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
 }
 
 .project-desc {
-  text-align:center; color:#e1bee7; margin-bottom:40px;
+  text-align: center;
+  color: #d1b3e0;
+  margin-bottom: 50px;
+  font-size: 16px;
+  max-width: 700px;
+  margin-left: auto;
+  margin-right: auto;
 }
 
-.stats {
-  display:flex; justify-content:center; gap:20px; margin-bottom:40px;
+/* Kanban Board */
+.board {
+  display: grid;
+  grid-template-columns: repeat(3,1fr);
+  gap: 28px;
+  max-width: 1400px;
+  margin: auto;
 }
-.stat-card {
-  background: linear-gradient(145deg,#7b1fa2,#9c27b0);
-  padding:16px 26px; border-radius:20px;
-  font-weight:700; color:white; box-shadow:0 15px 40px rgba(156,39,176,0.55);
+
+.column {
+  background: rgba(139,92,246,0.08);
+  border-radius: 28px;
+  padding: 28px;
+  border: 1px solid rgba(139,92,246,0.3);
+  backdrop-filter: blur(18px);
+  box-shadow: 0 25px 70px rgba(123,31,162,0.25);
   transition: all 0.3s ease;
 }
-.stat-card:hover { transform:translateY(-3px) scale(1.05); }
-
-.board { display:grid; grid-template-columns:repeat(3,1fr); gap:24px; max-width:1300px; margin:auto; }
-.column {
-  background: linear-gradient(160deg,rgba(156,39,176,0.1),rgba(123,31,162,0.07));
-  border-radius:24px; padding:26px;
-  border:1px solid rgba(156,39,176,0.3); backdrop-filter:blur(16px);
-  box-shadow:0 25px 70px rgba(123,31,162,0.25);
+.column:hover {
+  transform: translateY(-3px);
 }
-.col-header { display:flex; justify-content:space-between; align-items:center; margin-bottom:16px; }
-.col-header h2 { font-size:18px; font-weight:700; }
+
+/* Col Header */
+.col-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+}
+.col-header h2 {
+  font-size: 20px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+}
 .col-header .count {
-  background: rgba(255,255,255,0.15); padding:4px 10px; border-radius:12px; font-weight:700;
+  background: rgba(255,255,255,0.15);
+  padding: 6px 14px;
+  border-radius: 14px;
+  font-weight: 700;
 }
 
+/* Bouton Ajouter */
 .add {
-  width:100%; padding:12px; border-radius:16px; border:none;
-  font-weight:700; font-size:14px; cursor:pointer;
-  background: linear-gradient(90deg,#ea80fc,#ff80ab); color:white; margin-top:12px;
+  width: 100%;
+  padding: 14px;
+  border-radius: 20px;
+  border: none;
+  font-weight: 700;
+  font-size: 14px;
+  cursor: pointer;
+  background: linear-gradient(90deg,#ec4899,#8b5cf6);
+  color: white;
+  margin-top: 14px;
   transition: all 0.25s ease;
 }
-.add:hover { transform:translateY(-2px); box-shadow:0 15px 35px rgba(234,128,252,0.6); }
+.add:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 18px 40px rgba(236,72,153,0.6);
+}
+
+/* Responsive */
+@media (max-width: 1024px) {
+  .board {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+@media (max-width: 640px) {
+  .board {
+    grid-template-columns: 1fr;
+  }
+}
 </style>
