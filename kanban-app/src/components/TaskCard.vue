@@ -1,6 +1,6 @@
 <template>
-  <div class="task-card">
-    <!-- Header avec titre et actions -->
+  <div class="task-card" :class="`status-${status}`">
+    <!-- Header -->
     <div class="task-header">
       <h3 class="task-title">{{ title }}</h3>
       <div class="task-actions">
@@ -14,18 +14,21 @@
     </div>
 
     <!-- Description -->
-    <p class="task-desc">{{ desc }}</p>
+    <p class="task-desc">{{ desc || 'Aucune description' }}</p>
 
-    <!-- Footer avec date et statut -->
+    <!-- Footer -->
     <div class="task-footer">
-      <span class="due-date"><i class="fa-regular fa-calendar"></i> {{ formattedDueDate }}</span>
-      <span class="status-badge" :class="statusClass">{{ statusLabel }}</span>
+      <div class="due-date">
+        <i class="fa-regular fa-calendar"></i>
+        <span :class="{ 'overdue': isOverdue }">{{ formattedDueDate }}</span>
+      </div>
+      <button class="move-btn" @click="$emit('move')" title="Déplacer">
+        <i class="fa-solid fa-arrow-right"></i>
+      </button>
     </div>
 
-    <!-- Bouton déplacer -->
-    <button class="move-btn" @click="$emit('move')" title="Déplacer la tâche">
-      <i class="fa-solid fa-arrow-right"></i>
-    </button>
+    <!-- Status Indicator -->
+    <div class="status-indicator" :class="`status-${status}`"></div>
   </div>
 </template>
 
@@ -40,138 +43,188 @@ const props = defineProps({
 })
 
 const formattedDueDate = computed(() => {
-  if (!props.dueDate) return 'Aucune date'
+  if (!props.dueDate) return 'Pas de date'
   const d = new Date(props.dueDate)
   return d.toLocaleDateString('fr-FR', { day: '2-digit', month: 'short', year: 'numeric' })
 })
 
-const statusLabel = computed(() => {
-  if (props.status === 'todo') return 'À faire'
-  if (props.status === 'doing') return 'En cours'
-  return 'Terminé'
-})
-
-const statusClass = computed(() => {
-  return {
-    todo: props.status === 'todo',
-    doing: props.status === 'doing',
-    done: props.status === 'done'
-  }
+const isOverdue = computed(() => {
+  if (!props.dueDate) return false
+  const today = new Date()
+  const due = new Date(props.dueDate)
+  return due < today && props.status !== 'done'
 })
 </script>
 
 <style scoped>
-/* Police awesome icons - assure-toi de l'avoir inclus dans ton projet */
 @import url('https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css');
 
 .task-card {
-  background: linear-gradient(145deg, rgba(139,92,246,0.15), rgba(236,72,153,0.1));
-  border-radius: 22px;
-  padding: 20px 24px;
-  backdrop-filter: blur(18px);
-  box-shadow: 0 15px 35px rgba(139,92,246,0.25), 0 8px 25px rgba(236,72,153,0.2);
+  background: rgba(88, 28, 135, 0.2);
+  border: 1px solid rgba(168, 85, 247, 0.25);
+  border-radius: 16px;
+  padding: 18px;
   display: flex;
   flex-direction: column;
-  gap: 14px;
-  transition: transform 0.3s ease, box-shadow 0.3s ease;
-}
-.task-card:hover {
-  transform: translateY(-5px) scale(1.02);
-  box-shadow: 0 25px 60px rgba(139,92,246,0.45), 0 12px 40px rgba(236,72,153,0.35);
+  gap: 12px;
+  transition: all 0.3s ease;
+  position: relative;
+  overflow: hidden;
 }
 
+.task-card:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 8px 24px rgba(168, 85, 247, 0.3);
+  border-color: rgba(168, 85, 247, 0.5);
+}
+
+/* Status Indicator */
+.status-indicator {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 4px;
+  height: 100%;
+  border-radius: 16px 0 0 16px;
+}
+
+.status-indicator.status-todo {
+  background: linear-gradient(180deg, #fbbf24 0%, #f59e0b 100%);
+}
+
+.status-indicator.status-doing {
+  background: linear-gradient(180deg, #ec4899 0%, #db2777 100%);
+}
+
+.status-indicator.status-done {
+  background: linear-gradient(180deg, #22c55e 0%, #16a34a 100%);
+}
+
+/* Header */
 .task-header {
   display: flex;
   justify-content: space-between;
-  align-items: center;
+  align-items: flex-start;
+  gap: 12px;
 }
 
 .task-title {
-  font-size: 18px;
-  font-weight: 700;
+  font-size: 16px;
+  font-weight: 600;
   color: #fff;
   margin: 0;
-  word-break: break-word;
+  flex: 1;
+  line-height: 1.4;
 }
 
 .task-actions {
   display: flex;
-  gap: 8px;
+  gap: 6px;
+  flex-shrink: 0;
 }
 
 .action-btn {
-  background: rgba(255,255,255,0.1);
-  border: none;
-  border-radius: 10px;
+  background: rgba(168, 85, 247, 0.15);
+  border: 1px solid rgba(168, 85, 247, 0.3);
+  border-radius: 8px;
   padding: 6px 8px;
   cursor: pointer;
-  color: #fff;
-  font-size: 14px;
+  color: #d1b3e0;
+  font-size: 13px;
   transition: all 0.2s ease;
-}
-.action-btn:hover {
-  background: rgba(236,72,153,0.25);
-  transform: scale(1.1);
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
+.action-btn:hover {
+  background: rgba(168, 85, 247, 0.25);
+  color: #fff;
+  transform: scale(1.05);
+}
+
+.action-btn.delete:hover {
+  background: rgba(239, 68, 68, 0.25);
+  border-color: rgba(239, 68, 68, 0.5);
+  color: #fca5a5;
+}
+
+/* Description */
 .task-desc {
   font-size: 14px;
-  color: #e0c6f5;
+  color: #d1b3e0;
   line-height: 1.5;
-  min-height: 40px;
+  margin: 0;
+  min-height: 42px;
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
 }
 
+/* Footer */
 .task-footer {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  font-size: 13px;
+  gap: 12px;
+  margin-top: 4px;
 }
 
 .due-date {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
   color: #d1b3e0;
+}
+
+.due-date i {
+  font-size: 12px;
+}
+
+.due-date .overdue {
+  color: #fca5a5;
+  font-weight: 600;
+}
+
+.move-btn {
+  background: rgba(168, 85, 247, 0.2);
+  border: 1px solid rgba(168, 85, 247, 0.3);
+  border-radius: 8px;
+  padding: 6px 12px;
+  cursor: pointer;
+  color: #d1b3e0;
+  font-size: 13px;
+  transition: all 0.2s ease;
   display: flex;
   align-items: center;
   gap: 4px;
 }
 
-.status-badge {
-  padding: 4px 12px;
-  border-radius: 16px;
-  font-weight: 600;
-  font-size: 12px;
-  text-transform: uppercase;
+.move-btn:hover {
+  background: linear-gradient(90deg, #a855f7 0%, #ec4899 100%);
   color: #fff;
-}
-.status-badge.todo {
-  background: linear-gradient(90deg,#7c3aed,#9333ea);
-}
-.status-badge.doing {
-  background: linear-gradient(90deg,#ec4899,#f472b6);
-}
-.status-badge.done {
-  background: linear-gradient(90deg,#22c55e,#16a34a);
+  transform: translateX(2px);
+  box-shadow: 0 4px 12px rgba(168, 85, 247, 0.4);
 }
 
-.move-btn {
-  margin-top: 10px;
-  width: 100%;
-  padding: 8px;
-  border: none;
-  border-radius: 16px;
-  background: linear-gradient(90deg,#8b5cf6,#ec4899);
-  color: white;
-  font-size: 13px;
-  font-weight: 600;
-  cursor: pointer;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  gap: 6px;
-  transition: all 0.25s ease;
+/* Status variations */
+.task-card.status-todo {
+  background: rgba(251, 191, 36, 0.05);
 }
-.move-btn:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 15px 35px rgba(236,72,153,0.5);
+
+.task-card.status-doing {
+  background: rgba(236, 72, 153, 0.05);
+}
+
+.task-card.status-done {
+  background: rgba(34, 197, 94, 0.05);
+  opacity: 0.85;
+}
+
+.task-card.status-done .task-title {
+  text-decoration: line-through;
+  opacity: 0.8;
 }
 </style>

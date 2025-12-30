@@ -1,29 +1,34 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue'
-import { useRoute } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import { useProjectStore } from '../stores/projectStore'
 import TaskCard from '@/components/TaskCard.vue'
 import TaskModal from '@/components/TaskModal.vue'
 import AppNavbar from '@/components/AppNavbar.vue'
 
 const route = useRoute()
+const router = useRouter()
 const projectId = route.params.id
 const projectStore = useProjectStore()
 
+// Modal tâche
 const showModal = ref(false)
 const editingTask = ref(null)
 const editingColumn = ref(null)
 
+// Charger les tâches
 onMounted(() => {
   projectStore.getTasks(projectId)
 })
 
+// Tâches par statut
 const tasks = computed(() => ({
   todo: (projectStore.tasks[projectId] || []).filter(t => t.status === 'todo'),
   doing: (projectStore.tasks[projectId] || []).filter(t => t.status === 'doing'),
   done: (projectStore.tasks[projectId] || []).filter(t => t.status === 'done')
 }))
 
+// Statistiques
 const stats = computed(() => ({
   total: tasks.value.todo.length + tasks.value.doing.length + tasks.value.done.length,
   todo: tasks.value.todo.length,
@@ -31,17 +36,18 @@ const stats = computed(() => ({
   done: tasks.value.done.length
 }))
 
+// Modal controls
 const openModal = (column, task = null) => {
   editingColumn.value = column
   editingTask.value = task
   showModal.value = true
 }
-
 const closeModal = () => {
   showModal.value = false
   editingTask.value = null
 }
 
+// CRUD tâches
 const saveTask = async ({ title, desc, dueDate }) => {
   if (editingTask.value) {
     await projectStore.updateTask(projectId, editingTask.value.id, { title, desc, dueDate })
@@ -64,6 +70,11 @@ const deleteTask = async (task) => {
 const moveTask = async (task, toStatus) => {
   await projectStore.updateTask(projectId, task.id, { status: toStatus })
 }
+
+// Bouton retour
+const goBack = () => {
+  router.back()
+}
 </script>
 
 <template>
@@ -71,60 +82,147 @@ const moveTask = async (task, toStatus) => {
   <!-- Navbar fixée -->
   <AppNavbar class="fixed-navbar" />
 
-  <!-- Header Statistiques -->
-  <div class="stats">
-    <div class="stat-card">
-      <div class="stat-title">Total Tâches</div>
-      <div class="stat-value">{{ stats.total }}</div>
-    </div>
-    <div class="stat-card">
-      <div class="stat-title">À faire</div>
-      <div class="stat-value">{{ stats.todo }}</div>
-    </div>
-    <div class="stat-card">
-      <div class="stat-title">En cours</div>
-      <div class="stat-value">{{ stats.doing }}</div>
-    </div>
-    <div class="stat-card">
-      <div class="stat-title">Terminé</div>
-      <div class="stat-value">{{ stats.done }}</div>
-    </div>
-  </div>
+  <div class="container">
+    <!-- Bouton Retour -->
+    <button class="back-btn" @click="goBack">
+      <i class="fa-solid fa-arrow-left"></i>
+      Retour
+    </button>
 
-  <h1 class="project-title">Task Flow - KANBAN</h1>
-  <p class="project-desc">Organisez vos tâches, suivez leur avancement et restez productif en un coup d’œil.</p>
+    <!-- Header avec titre et stats -->
+    <div class="page-header">
+      <div class="header-left">
+        <div class="icon-wrapper">
+          <i class="fa-solid fa-list-check"></i>
+        </div>
+        <div class="header-text">
+          <h1 class="page-title">Refonte Site Web</h1>
+          <p class="page-subtitle">Moderniser l'interface utilisateur du site corporate</p>
+        </div>
+      </div>
+      <div class="header-right">
+        <div class="stat-pill">
+          <span class="stat-label">Total tâches</span>
+          <span class="stat-number">{{ stats.total }}</span>
+        </div>
+        <div class="stat-pill">
+          <span class="stat-label">Terminées</span>
+          <span class="stat-number">{{ stats.done }}</span>
+        </div>
+      </div>
+    </div>
 
-  <!-- Kanban -->
-  <div class="board">
-    <div v-for="col in ['todo','doing','done']" :key="col" class="column">
-      <div class="col-header">
-        <h2>{{ col==='todo'?'À faire':col==='doing'?'En cours':'Terminé' }}</h2>
-        <span class="count">{{ tasks[col].length }}</span>
+    <!-- Kanban Board -->
+    <div class="board">
+      <!-- Colonne À faire -->
+      <div class="column">
+        <div class="col-header todo-header">
+          <div class="col-title">
+            <i class="fa-solid fa-clipboard-list"></i>
+            <span>À faire</span>
+          </div>
+          <span class="col-count">{{ stats.todo }}</span>
+        </div>
+
+        <button class="add-task-btn" @click="openModal('todo')">
+          <i class="fa-solid fa-plus"></i>
+          Ajouter une tâche
+        </button>
+
+        <div class="tasks-container">
+          <TaskCard
+            v-for="task in tasks.todo"
+            :key="task.id"
+            :title="task.title"
+            :desc="task.desc"
+            :dueDate="task.dueDate"
+            :status="task.status"
+            @edit="openModal('todo', task)"
+            @delete="deleteTask(task)"
+            @move="moveTask(task, 'doing')"
+          />
+          <div v-if="tasks.todo.length === 0" class="empty-state">
+            Aucune tâche
+          </div>
+        </div>
       </div>
 
-      <TaskCard
-        v-for="task in tasks[col]"
-        :key="task.id"
-        :title="task.title"
-        :desc="task.desc"
-        :dueDate="task.dueDate"
-        @edit="openModal(col,task)"
-        @delete="deleteTask(task)"
-        @move="moveTask(task,
-          col === 'todo' ? 'doing' :
-          col === 'doing' ? 'done' : 'todo'
-        )"
-      />
+      <!-- Colonne En cours -->
+      <div class="column">
+        <div class="col-header doing-header">
+          <div class="col-title">
+            <i class="fa-solid fa-bolt"></i>
+            <span>En cours</span>
+          </div>
+          <span class="col-count">{{ stats.doing }}</span>
+        </div>
 
-      <button class="add" @click="openModal(col)">+ Ajouter une tâche</button>
+        <button class="add-task-btn" @click="openModal('doing')">
+          <i class="fa-solid fa-plus"></i>
+          Ajouter une tâche
+        </button>
+
+        <div class="tasks-container">
+          <TaskCard
+            v-for="task in tasks.doing"
+            :key="task.id"
+            :title="task.title"
+            :desc="task.desc"
+            :dueDate="task.dueDate"
+            :status="task.status"
+            @edit="openModal('doing', task)"
+            @delete="deleteTask(task)"
+            @move="moveTask(task, 'done')"
+          />
+          <div v-if="tasks.doing.length === 0" class="empty-state">
+            Aucune tâche
+          </div>
+        </div>
+      </div>
+
+      <!-- Colonne Terminé -->
+      <div class="column">
+        <div class="col-header done-header">
+          <div class="col-title">
+            <i class="fa-solid fa-circle-check"></i>
+            <span>Terminé</span>
+          </div>
+          <span class="col-count">{{ stats.done }}</span>
+        </div>
+
+        <button class="add-task-btn" @click="openModal('done')">
+          <i class="fa-solid fa-plus"></i>
+          Ajouter une tâche
+        </button>
+
+        <div class="tasks-container">
+          <TaskCard
+            v-for="task in tasks.done"
+            :key="task.id"
+            :title="task.title"
+            :desc="task.desc"
+            :dueDate="task.dueDate"
+            :status="task.status"
+            @edit="openModal('done', task)"
+            @delete="deleteTask(task)"
+            @move="moveTask(task, 'todo')"
+          />
+          <div v-if="tasks.done.length === 0" class="empty-state">
+            Aucune tâche
+          </div>
+        </div>
+      </div>
     </div>
   </div>
 
+  <!-- Modal Tâche -->
   <TaskModal :show="showModal" :task="editingTask" @close="closeModal" @save="saveTask"/>
 </div>
 </template>
 
 <style scoped>
+@import url('https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css');
+
 /* Navbar fixée */
 .fixed-navbar {
   position: fixed;
@@ -134,139 +232,245 @@ const moveTask = async (task, toStatus) => {
   z-index: 999;
 }
 
-/* Page */
+/* Page principale */
 .project-page {
   min-height: 100vh;
-  padding: 120px 40px 40px; /* top pour navbar fixe */
-  background: linear-gradient(135deg,#1f0533,#3b0761);
-  font-family: 'Poppins', sans-serif;
+  background: linear-gradient(180deg, #1a0b2e 0%, #2d1b4e 50%, #1a0b2e 100%);
+  font-family: 'Inter', 'Segoe UI', sans-serif;
   color: white;
+  padding-top: 80px;
 }
 
-/* Statistiques */
-.stats {
-  display: flex;
-  justify-content: center;
-  gap: 30px;
-  margin-bottom: 50px;
-  flex-wrap: wrap;
+.container {
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: 40px 20px;
 }
 
-.stat-card {
-  background: rgba(139,92,246,0.15);
-  border-radius: 24px;
-  padding: 28px 36px;
-  text-align: center;
-  backdrop-filter: blur(16px);
-  box-shadow: 0 15px 40px rgba(156,39,176,0.4);
-  transition: all 0.3s ease;
-  min-width: 150px;
-}
-.stat-card:hover {
-  transform: translateY(-5px) scale(1.05);
-  box-shadow: 0 20px 50px rgba(156,39,176,0.55);
-}
-.stat-title {
+/* Bouton Retour */
+.back-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 24px;
+  background: rgba(168, 85, 247, 0.15);
+  border: 1px solid rgba(168, 85, 247, 0.3);
+  border-radius: 12px;
+  color: #d1b3e0;
   font-size: 14px;
   font-weight: 600;
-  color: #e0c6f5;
-  margin-bottom: 10px;
-  text-transform: uppercase;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  margin-bottom: 24px;
 }
-.stat-value {
-  font-size: 32px;
+
+.back-btn:hover {
+  background: linear-gradient(90deg, #a855f7 0%, #ec4899 100%);
+  color: #fff;
+  transform: translateX(-4px);
+  box-shadow: 0 4px 16px rgba(168, 85, 247, 0.4);
+}
+
+.back-btn i {
+  font-size: 14px;
+}
+
+/* Header */
+.page-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 40px;
+  background: rgba(88, 28, 135, 0.15);
+  border: 1px solid rgba(168, 85, 247, 0.2);
+  border-radius: 20px;
+  padding: 28px 32px;
+  backdrop-filter: blur(10px);
+}
+
+.header-left {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+}
+
+.icon-wrapper {
+  width: 64px;
+  height: 64px;
+  background: linear-gradient(135deg, #a855f7 0%, #ec4899 100%);
+  border-radius: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 28px;
+  box-shadow: 0 8px 24px rgba(168, 85, 247, 0.4);
+}
+
+.header-text {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.page-title {
+  font-size: 28px;
+  font-weight: 700;
+  margin: 0;
+  background: linear-gradient(90deg, #fbbf24 0%, #f59e0b 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.page-subtitle {
+  font-size: 14px;
+  color: #d1b3e0;
+  margin: 0;
+}
+
+.header-right {
+  display: flex;
+  gap: 16px;
+}
+
+.stat-pill {
+  background: rgba(168, 85, 247, 0.15);
+  border: 1px solid rgba(168, 85, 247, 0.3);
+  border-radius: 12px;
+  padding: 12px 20px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+}
+
+.stat-label {
+  font-size: 12px;
+  color: #d1b3e0;
+  text-transform: capitalize;
+}
+
+.stat-number {
+  font-size: 24px;
   font-weight: 700;
   color: #fff;
-}
-
-/* Titres projet */
-.project-title {
-  font-size: 44px; font-weight: 700;
-  text-align: center; margin-bottom: 10px;
-  background: linear-gradient(90deg,#8b5cf6,#ec4899);
-  /* -webkit-background-clip: text; */
-  -webkit-text-fill-color: transparent;
-}
-
-.project-desc {
-  text-align: center;
-  color: #d1b3e0;
-  margin-bottom: 50px;
-  font-size: 16px;
-  max-width: 700px;
-  margin-left: auto;
-  margin-right: auto;
 }
 
 /* Kanban Board */
 .board {
   display: grid;
-  grid-template-columns: repeat(3,1fr);
-  gap: 28px;
-  max-width: 1400px;
-  margin: auto;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 24px;
 }
 
 .column {
-  background: rgba(139,92,246,0.08);
-  border-radius: 28px;
-  padding: 28px;
-  border: 1px solid rgba(139,92,246,0.3);
-  backdrop-filter: blur(18px);
-  box-shadow: 0 25px 70px rgba(123,31,162,0.25);
-  transition: all 0.3s ease;
-}
-.column:hover {
-  transform: translateY(-3px);
+  background: rgba(88, 28, 135, 0.15);
+  border: 1px solid rgba(168, 85, 247, 0.2);
+  border-radius: 20px;
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
 }
 
-/* Col Header */
+/* Column Header */
 .col-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 20px;
+  padding: 12px 16px;
+  border-radius: 12px;
+  background: rgba(168, 85, 247, 0.1);
 }
-.col-header h2 {
-  font-size: 20px;
-  font-weight: 700;
-  letter-spacing: 0.5px;
+
+.todo-header {
+  background: rgba(251, 191, 36, 0.15);
+  border: 1px solid rgba(251, 191, 36, 0.3);
 }
-.col-header .count {
-  background: rgba(255,255,255,0.15);
-  padding: 6px 14px;
-  border-radius: 14px;
+
+.doing-header {
+  background: rgba(236, 72, 153, 0.15);
+  border: 1px solid rgba(236, 72, 153, 0.3);
+}
+
+.done-header {
+  background: rgba(34, 197, 94, 0.15);
+  border: 1px solid rgba(34, 197, 94, 0.3);
+}
+
+.col-title {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 16px;
   font-weight: 700;
 }
 
-/* Bouton Ajouter */
-.add {
-  width: 100%;
-  padding: 14px;
+.col-count {
+  background: rgba(255, 255, 255, 0.15);
+  padding: 4px 12px;
   border-radius: 20px;
-  border: none;
-  font-weight: 700;
   font-size: 14px;
-  cursor: pointer;
-  background: linear-gradient(90deg,#ec4899,#8b5cf6);
-  color: white;
-  margin-top: 14px;
-  transition: all 0.25s ease;
+  font-weight: 600;
 }
-.add:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 18px 40px rgba(236,72,153,0.6);
+
+/* Add Task Button */
+.add-task-btn {
+  width: 100%;
+  padding: 12px;
+  border: 2px dashed rgba(168, 85, 247, 0.3);
+  border-radius: 12px;
+  background: transparent;
+  color: #d1b3e0;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  transition: all 0.3s ease;
+}
+
+.add-task-btn:hover {
+  background: rgba(168, 85, 247, 0.1);
+  border-color: rgba(168, 85, 247, 0.5);
+  color: #fff;
+}
+
+/* Tasks Container */
+.tasks-container {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  min-height: 200px;
+}
+
+.empty-state {
+  text-align: center;
+  color: #9ca3af;
+  padding: 40px 20px;
+  font-size: 14px;
 }
 
 /* Responsive */
 @media (max-width: 1024px) {
   .board {
-    grid-template-columns: 1fr 1fr;
-  }
-}
-@media (max-width: 640px) {
-  .board {
     grid-template-columns: 1fr;
+  }
+  
+  .page-header {
+    flex-direction: column;
+    gap: 20px;
+    text-align: center;
+  }
+  
+  .header-left {
+    flex-direction: column;
+  }
+  
+  .header-right {
+    justify-content: center;
   }
 }
 </style>
