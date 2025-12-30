@@ -1,57 +1,82 @@
 <script setup>
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted } from 'vue'
+import { useRoute } from 'vue-router'
+import { useProjectStore } from '../stores/projectStore'
 import TaskCard from '@/components/TaskCard.vue'
 import TaskModal from '@/components/TaskModal.vue'
 
-const tasks = ref({
-  todo: [
-    {id:1,title:'Design mockups',desc:"Créer les maquettes UI/UX",dueDate:'2025-12-30'}
-  ],
-  doing: [
-    {id:2,title:'Développement frontend',desc:"Implémenter les composants React",dueDate:'2025-12-29'}
-  ],
-  done: []
-})
+const route = useRoute()
+const projectId = route.params.id
+const projectStore = useProjectStore()
 
+// Modal state
 const showModal = ref(false)
 const editingTask = ref(null)
 const editingColumn = ref(null)
 
-const openModal = (column, task=null) => {
-  editingColumn.value = column
-  editingTask.value = task
-  showModal.value = true
-}
+// Charger les tâches Firestore
+onMounted(() => {
+  projectStore.getTasks(projectId)
+})
 
-const closeModal = () => showModal.value = false
+// 🔥 Tâches par statut (depuis Firestore)
+const tasks = computed(() => ({
+  todo: (projectStore.tasks[projectId] || []).filter(t => t.status === 'todo'),
+  doing: (projectStore.tasks[projectId] || []).filter(t => t.status === 'doing'),
+  done: (projectStore.tasks[projectId] || []).filter(t => t.status === 'done')
+}))
 
-const saveTask = ({title, desc, dueDate}) => {
-  if(editingTask.value){
-    editingTask.value.title = title
-    editingTask.value.desc = desc
-    editingTask.value.dueDate = dueDate
-  } else {
-    tasks.value[editingColumn.value].push({id:Date.now(),title,desc,dueDate})
-  }
-  closeModal()
-}
-
-const deleteTask = (task, column) => {
-  tasks.value[column] = tasks.value[column].filter(t=>t.id!==task.id)
-}
-
-const moveTask = (task, from, to) => {
-  tasks.value[from] = tasks.value[from].filter(t=>t.id!==task.id)
-  tasks.value[to].push(task)
-}
-
+// 📊 Statistiques
 const stats = computed(() => ({
   total: tasks.value.todo.length + tasks.value.doing.length + tasks.value.done.length,
   todo: tasks.value.todo.length,
   doing: tasks.value.doing.length,
   done: tasks.value.done.length
 }))
+
+// Modal controls
+const openModal = (column, task = null) => {
+  editingColumn.value = column
+  editingTask.value = task
+  showModal.value = true
+}
+
+const closeModal = () => {
+  showModal.value = false
+  editingTask.value = null
+}
+
+// CRUD tâches
+const saveTask = async ({ title, desc, dueDate }) => {
+  if (editingTask.value) {
+    await projectStore.updateTask(
+      projectId,
+      editingTask.value.id,
+      { title, desc, dueDate }
+    )
+  } else {
+    await projectStore.addTask(projectId, {
+      title,
+      desc,
+      dueDate,
+      status: editingColumn.value,
+      createdAt: new Date()
+    })
+  }
+  closeModal()
+}
+
+const deleteTask = async (task) => {
+  await projectStore.deleteTask(projectId, task.id)
+}
+
+const moveTask = async (task, toStatus) => {
+  await projectStore.updateTask(projectId, task.id, {
+    status: toStatus
+  })
+}
 </script>
+
 
 <template>
 <div class="page">
@@ -81,8 +106,11 @@ const stats = computed(() => ({
         :desc="task.desc"
         :dueDate="task.dueDate"
         @edit="openModal(col,task)"
-        @delete="deleteTask(task,col)"
-        @move="moveTask(task,col,col==='todo'?'doing':col==='doing'?'done':'todo')"
+        @delete="deleteTask(task)"
+        @move="moveTask(task,
+          col === 'todo' ? 'doing' :
+          col === 'doing' ? 'done' : 'todo'
+        )"
       />
 
       <button class="add" @click="openModal(col)">+ Ajouter une tâche</button>
@@ -106,7 +134,7 @@ const stats = computed(() => ({
   font-size:36px; font-weight:700;
   text-align:center; margin-bottom:6px;
   background: linear-gradient(90deg,#ff80ab,#ea80fc);
-  -webkit-background-clip:text;
+  /* -webkit-background-clip:text; */
   -webkit-text-fill-color:transparent;
 }
 
