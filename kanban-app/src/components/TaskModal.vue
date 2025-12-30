@@ -52,7 +52,9 @@ const save = () => {
   width:100%; max-width:400px; box-shadow:0 25px 60px rgba(123,31,162,0.55);
   color:white; display:flex; flex-direction:column; gap:12px;
 }
-.modal h2 { font-size:20px; margin-bottom:12px; background: linear-gradient(90deg,#ff80ab,#ea80fc); -webkit-background-clip:text; -webkit-text-fill-color:transparent; }
+.modal h2 { font-size:20px; margin-bottom:12px; background: linear-gradient(90deg,#ff80ab,#ea80fc);
+ /* -webkit-background-clip:text;  */
+ -webkit-text-fill-color:transparent; }
 .modal input, .modal textarea {
   width:100%; padding:12px; border-radius:12px; border:none;
   outline:none; font-size:14px; background: rgba(255,255,255,0.12); color:white;

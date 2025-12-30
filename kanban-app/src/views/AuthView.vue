@@ -137,7 +137,7 @@ const loginWithGoogle = async () => {
   font-size: 36px;
   font-weight: 800;
   background: linear-gradient(90deg, #ff80ab, #ea80fc);
-  -webkit-background-clip: text;
+  /* -webkit-background-clip: text; */
   -webkit-text-fill-color: transparent;
   margin-bottom: 8px;
 }

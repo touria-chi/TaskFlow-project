@@ -1,8 +1,8 @@
 <template>
   <AppNavbar />
   <div class="dashboard-container">
-    <LoadingSpinner v-if="isLoading" />
-    <div v-else>
+    <!-- <LoadingSpinner v-if="isLoading" /> -->
+    <div>
       <!-- Votre contenu -->
   
     <!-- Header Section -->
