@@ -184,7 +184,7 @@ const moveTask = async (task, toStatus) => {
   font-size: 44px; font-weight: 700;
   text-align: center; margin-bottom: 10px;
   background: linear-gradient(90deg,#8b5cf6,#ec4899);
-  -webkit-background-clip: text;
+  /* -webkit-background-clip: text; */
   -webkit-text-fill-color: transparent;
 }
 
