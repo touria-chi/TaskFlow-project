@@ -96,7 +96,7 @@ const goBack = () => {
           <i class="fa-solid fa-list-check"></i>
         </div>
         <div class="header-text">
-          <h1 class="page-title">KANBAN</h1>
+          <h1 class="page-title">TaskFlow</h1>
           <p class="page-subtitle">Planifiez, avancez et réussissez — une tâche à la fois</p>
         </div>
       </div>
