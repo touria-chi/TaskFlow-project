@@ -9,7 +9,12 @@
       <!-- Logo & Header -->
       <div class="auth-header">
         <div class="logo">
-          <span class="logo-icon">✦</span>
+          <div class="logosvg">
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M9 11l3 3L22 4"></path>
+              <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"></path>
+            </svg>
+          </div>
           <span class="logo-text">TaskFlow</span>
         </div>
         <h1 class="auth-title">
@@ -206,6 +211,18 @@ const loginWithGoogle = async () => {
 </script>
 
 <style scoped>
+
+.logosvg {
+  width: 40px;
+  height: 40px;
+  background: linear-gradient(135deg, #8b5cf6 0%, #6366f1 100%);
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+}
+
 .auth-container {
   min-height: 100vh;
   background: linear-gradient(135deg, #0f0626 0%, #1a0b2e 50%, #2d1b4e 100%);

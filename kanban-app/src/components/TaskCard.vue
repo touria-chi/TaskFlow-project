@@ -157,7 +157,7 @@ const isOverdue = computed(() => {
   margin: 0;
   min-height: 42px;
   display: -webkit-box;
-  -webkit-line-clamp: 3;
+  /* -webkit-line-clamp: 3; */
   -webkit-box-orient: vertical;
   overflow: hidden;
 }

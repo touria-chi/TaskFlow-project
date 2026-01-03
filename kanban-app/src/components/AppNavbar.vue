@@ -12,19 +12,6 @@
         <span class="app-name">TaskFlow</span>
       </div>
 
-      <!-- Barre de recherche -->
-      <div class="search-bar">
-        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="search-icon">
-          <circle cx="11" cy="11" r="8"></circle>
-          <path d="m21 21-4.35-4.35"></path>
-        </svg>
-        <input 
-          type="text" 
-          placeholder="Rechercher un projet ou une tâche..."
-          v-model="searchQuery"
-        />
-      </div>
-
       <!-- Section utilisateur -->
       <div class="user-section">
         <div class="user-menu" @click="toggleDropdown" ref="userMenuRef">
@@ -63,7 +50,6 @@ import { useRouter } from 'vue-router'
 const authStore = useAuthStore()
 const router = useRouter()
 
-const searchQuery = ref('')
 const dropdownOpen = ref(false)
 const userMenuRef = ref(null)
 
